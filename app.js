@@ -1,41 +1,70 @@
-// CONFIGURACIÓN: pega aquí la URL pública de tu Cloudflare Worker.
-// El Worker debe aceptar multipart/form-data con los campos:
-// personImage, garmentImage y quality. Debe responder JSON con { "image": "https://..." }
-// o { "image": "data:image/png;base64,..." }.
-// No coloques aquí tu API key de FASHN: debe permanecer como secreto en Cloudflare.
-const API_URL = "PEGA_AQUI_LA_URL_DE_TU_CLOUDFLARE_WORKER";
+
+// ==========================================
+// ATELIER - PROBADOR VIRTUAL CON FASHN AI
+// ==========================================
+
+const API_URL = "https://vertice-api.k71559676.workers.dev";
 
 const $ = (id) => document.getElementById(id);
-const state = { person: null, garment: null, resultUrl: null, quality: "standard" };
+
+const state = {
+  person: null,
+  garment: null,
+  resultUrl: null,
+  quality: "standard"
+};
+
+// ==========================================
+// MENSAJES
+// ==========================================
 
 function showToast(message) {
   const toast = $("toast");
   toast.textContent = message;
   toast.classList.add("show");
+
   clearTimeout(showToast.timer);
-  showToast.timer = setTimeout(() => toast.classList.remove("show"), 2800);
+
+  showToast.timer = setTimeout(() => {
+    toast.classList.remove("show");
+  }, 2800);
 }
+
+// ==========================================
+// CARGAR FOTOGRAFÍAS
+// ==========================================
 
 function loadImage(file, type) {
   if (!file) return;
+
   if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
     showToast("Elige una imagen JPG, PNG o WEBP.");
     return;
   }
+
   if (file.size > 12 * 1024 * 1024) {
     showToast("La imagen supera el límite de 12 MB.");
     return;
   }
+
   const reader = new FileReader();
+
   reader.onload = () => {
-    state[type] = { file, dataUrl: reader.result };
+    state[type] = {
+      file,
+      dataUrl: reader.result
+    };
+
     const prefix = type === "person" ? "person" : "garment";
+
     $(prefix + "Preview").src = reader.result;
     $(prefix + "Preview").hidden = false;
     $(prefix + "Placeholder").hidden = true;
     $(prefix + "Change").hidden = false;
+
     updateGenerateButton();
   };
+
   reader.readAsDataURL(file);
 }
 
@@ -43,170 +72,360 @@ function updateGenerateButton() {
   $("generateBtn").disabled = !(state.person && state.garment);
 }
 
-$("personInput").addEventListener("change", e => loadImage(e.target.files[0], "person"));
-$("garmentInput").addEventListener("change", e => loadImage(e.target.files[0], "garment"));
+$("personInput").addEventListener("change", e => {
+  loadImage(e.target.files[0], "person");
+});
+
+$("garmentInput").addEventListener("change", e => {
+  loadImage(e.target.files[0], "garment");
+});
+
+// ==========================================
+// ARRASTRAR Y SOLTAR IMÁGENES
+// ==========================================
 
 function enableDropzone(zoneId, inputId, type) {
   const zone = $(zoneId);
-  ["dragenter", "dragover"].forEach(evt => zone.addEventListener(evt, e => {
-    e.preventDefault(); zone.classList.add("dragover");
-  }));
-  ["dragleave", "drop"].forEach(evt => zone.addEventListener(evt, e => {
-    e.preventDefault(); zone.classList.remove("dragover");
-  }));
+
+  ["dragenter", "dragover"].forEach(evt => {
+    zone.addEventListener(evt, e => {
+      e.preventDefault();
+      zone.classList.add("dragover");
+    });
+  });
+
+  ["dragleave", "drop"].forEach(evt => {
+    zone.addEventListener(evt, e => {
+      e.preventDefault();
+      zone.classList.remove("dragover");
+    });
+  });
+
   zone.addEventListener("drop", e => {
     const file = e.dataTransfer.files[0];
+
     if (file) loadImage(file, type);
   });
 }
+
 enableDropzone("personDrop", "personInput", "person");
 enableDropzone("garmentDrop", "garmentInput", "garment");
 
+// ==========================================
+// CALIDAD DE IMAGEN
+// ==========================================
+
 document.querySelectorAll(".quality-option").forEach(btn => {
   btn.addEventListener("click", () => {
-    document.querySelectorAll(".quality-option").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".quality-option").forEach(b => {
+      b.classList.remove("active");
+    });
+
     btn.classList.add("active");
     state.quality = btn.dataset.quality;
   });
 });
 
+// ==========================================
+// MOSTRAR RESULTADO
+// ==========================================
+
 function setResult(src) {
-  if (state.resultUrl && state.resultUrl.startsWith("blob:")) URL.revokeObjectURL(state.resultUrl);
+  if (state.resultUrl && state.resultUrl.startsWith("blob:")) {
+    URL.revokeObjectURL(state.resultUrl);
+  }
+
   state.resultUrl = src;
+
   $("resultImage").src = src;
   $("modalImage").src = src;
+
   $("emptyResult").hidden = true;
   $("loadingState").hidden = true;
   $("resultImageWrap").hidden = false;
+
   $("viewBtn").disabled = false;
   $("downloadBtn").disabled = false;
-  $("resultHint").innerHTML = '<span>✦</span> ¡Tu look está listo!';
+
+  $("resultHint").innerHTML = "✦ ¡Tu look está listo!";
 }
 
+// ==========================================
+// CONECTAR CON FASHN AI
+// ==========================================
+
 async function generateLook() {
-  if (!state.person || !state.garment) return;
-  if (!API_URL || API_URL.includes("PEGA_AQUI")) {
-    showToast("Primero conecta la URL de tu Cloudflare Worker en app.js.");
-    $("configNote").textContent = "Falta configurar API_URL en app.js para activar la generación real con IA.";
+
+  if (!state.person || !state.garment) {
+    showToast("Sube las dos fotografías antes de continuar.");
     return;
   }
+
   $("generateBtn").disabled = true;
-  $("generateText").textContent = "Creando tu look...";
+  $("generateText").textContent = "Enviando a la IA...";
+
   $("emptyResult").hidden = true;
   $("resultImageWrap").hidden = true;
   $("loadingState").hidden = false;
-  $("resultHint").textContent = "Procesando tus fotografías...";
+
+  $("resultHint").textContent = "Conectando con FASHN AI...";
+
   try {
-    const formData = new FormData();
-    formData.append("personImage", state.person.file, state.person.file.name);
-    formData.append("garmentImage", state.garment.file, state.garment.file.name);
-    formData.append("quality", state.quality);
-    const response = await fetch(API_URL, { method: "POST", body: formData });
-    if (!response.ok) {
-      const details = await response.text();
-      throw new Error(details || `Error ${response.status}`);
+
+    const response = await fetch(`${API_URL}/api/tryon`, {
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json"
+      },
+
+      body: JSON.stringify({
+
+        // Nombres que espera tu Worker
+        model_image: state.person.dataUrl,
+        garment_image: state.garment.dataUrl,
+
+        category: "auto",
+        garment_photo_type: "auto",
+
+        mode: state.quality === "high"
+          ? "quality"
+          : "balanced"
+
+      })
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || data.success === false) {
+
+      const detail =
+        data.details?.message ||
+        data.details?.error ||
+        data.details?.detail;
+
+      throw new Error(
+        detail || data.error || `Error ${response.status}`
+      );
     }
-    const data = await response.json();
-    const image = data.image || data.result || data.output || data.url;
-    if (!image) throw new Error("El Worker respondió, pero no devolvió una imagen. Revisa el formato de respuesta.");
-    setResult(image);
-    $("configNote").textContent = "Generación conectada correctamente.";
+
+    if (!data.id) {
+      throw new Error(
+        data.error || "El Worker no devolvió el identificador."
+      );
+    }
+
+    $("generateText").textContent = "La IA está trabajando...";
+
+    $("resultHint").textContent =
+      "Solicitud recibida. Generando tu look...";
+
+    await pollGeneration(data.id);
+
   } catch (error) {
+
+    console.error("ATELIER / FASHN:", error);
+
     $("loadingState").hidden = true;
     $("emptyResult").hidden = false;
-    $("resultHint").textContent = "No se pudo generar el resultado.";
-    showToast(error.message || "Ocurrió un error al generar la imagen.");
+
+    $("resultHint").textContent =
+      "No se pudo generar el resultado.";
+
+    showToast(error.message || "Error al generar la imagen.");
+
   } finally {
+
     $("generateBtn").disabled = false;
     $("generateText").textContent = "Crear mi look";
+
     updateGenerateButton();
   }
 }
+
+// ==========================================
+// CONSULTAR RESULTADO DE FASHN
+// ==========================================
+
+async function pollGeneration(predictionId) {
+
+  const maxAttempts = 60;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+
+    await new Promise(resolve => setTimeout(resolve, 2500));
+
+    const response = await fetch(
+      `${API_URL}/api/status?id=${encodeURIComponent(predictionId)}`
+    );
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || data.success === false) {
+
+      const detail =
+        data.details?.message ||
+        data.details?.error ||
+        data.details?.detail;
+
+      throw new Error(
+        detail || data.error ||
+        `Error consultando el estado (${response.status}).`
+      );
+    }
+
+    if (data.status === "completed") {
+
+      const image = Array.isArray(data.output)
+        ? data.output[0]
+        : null;
+
+      if (!image) {
+        throw new Error(
+          "FASHN terminó, pero no devolvió una imagen."
+        );
+      }
+
+      setResult(image);
+
+      $("resultHint").innerHTML =
+        "✦ ¡Tu look está listo!";
+
+      $("configNote").textContent =
+        "Conectado con FASHN AI · Generación completada.";
+
+      showToast("¡Tu prueba virtual está lista!");
+
+      return;
+    }
+
+    if (data.status === "failed") {
+
+      const message = typeof data.error === "string"
+        ? data.error
+        : data.error?.message;
+
+      throw new Error(
+        message || "FASHN no pudo generar esta imagen."
+      );
+    }
+
+    $("resultHint").textContent =
+      `La IA está procesando tu look · ${data.status || "en espera"}`;
+  }
+
+  throw new Error(
+    "La generación está tardando demasiado. Inténtalo nuevamente."
+  );
+}
+
 $("generateBtn").addEventListener("click", generateLook);
 
+// ==========================================
+// AMPLIAR RESULTADO
+// ==========================================
+
 function openModal() {
+
   if (!state.resultUrl) return;
+
   $("modalImage").src = state.resultUrl;
+
   $("imageModal").classList.add("open");
+
   $("imageModal").setAttribute("aria-hidden", "false");
+
   document.body.style.overflow = "hidden";
 }
+
 function closeModal() {
+
   $("imageModal").classList.remove("open");
+
   $("imageModal").setAttribute("aria-hidden", "true");
+
   document.body.style.overflow = "";
 }
+
 $("expandBtn").addEventListener("click", openModal);
 $("viewBtn").addEventListener("click", openModal);
+
 $("modalClose").addEventListener("click", closeModal);
 $("modalBackdrop").addEventListener("click", closeModal);
-document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") closeModal();
+});
+
+// ==========================================
+// DESCARGAR RESULTADO
+// ==========================================
 
 async function downloadResult() {
+
   if (!state.resultUrl) {
-    showToast("Primero genera tu look para poder descargarlo.");
+    showToast("Primero genera tu look.");
     return;
   }
 
-  const buttons = [$("downloadBtn"), $("modalDownload")];
-  buttons.forEach(button => {
-    button.disabled = true;
-    if (button.id === "downloadBtn") button.textContent = "Preparando...";
-    else button.textContent = "Preparando descarga...";
-  });
-
   try {
-    // Fetch convierte tanto Data URLs como imágenes alojadas en el Worker
-    // en un Blob local. Así el navegador puede descargar el archivo
-    // aunque la imagen venga desde otro dominio (si el servidor permite CORS).
+
     const response = await fetch(state.resultUrl);
-    if (!response.ok) throw new Error(`No se pudo obtener la imagen (${response.status}).`);
+
+    if (!response.ok) {
+      throw new Error("No se pudo obtener la imagen.");
+    }
 
     const blob = await response.blob();
-    if (!blob.size) throw new Error("La imagen recibida está vacía.");
+
+    if (!blob.size) {
+      throw new Error("La imagen está vacía.");
+    }
 
     const mime = blob.type || "image/png";
-    const extension = mime.includes("jpeg") ? "jpg"
-      : mime.includes("webp") ? "webp"
-      : mime.includes("png") ? "png" : "png";
+
+    const extension = mime.includes("jpeg")
+      ? "jpg"
+      : mime.includes("webp")
+      ? "webp"
+      : "png";
 
     const objectUrl = URL.createObjectURL(blob);
+
     const link = document.createElement("a");
+
     link.href = objectUrl;
     link.download = `mi-look-virtual.${extension}`;
-    link.style.display = "none";
+
     document.body.appendChild(link);
+
     link.click();
     link.remove();
 
-    // Se revoca después de que el navegador haya iniciado la descarga.
-    setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+    setTimeout(() => {
+      URL.revokeObjectURL(objectUrl);
+    }, 1500);
+
     showToast("¡Tu imagen se está descargando!");
+
   } catch (error) {
-    console.error("Error al descargar el resultado:", error);
-    // Si el servidor remoto bloquea CORS, se ofrece abrir la imagen
-    // en una pestaña para que el usuario pueda guardarla manualmente.
-    try {
-      const opened = window.open(state.resultUrl, "_blank", "noopener");
-      if (opened) {
-        showToast("La imagen se abrió en otra pestaña. Usa Guardar imagen como.");
-      } else {
-        showToast("El servidor bloqueó la descarga. Revisa los permisos CORS del Worker.");
-      }
-    } catch (_) {
-      showToast("No se pudo descargar. Revisa los permisos CORS del Worker.");
-    }
-  } finally {
-    buttons.forEach(button => {
-      button.disabled = false;
-      if (button.id === "downloadBtn") button.textContent = "↓ Descargar";
-      else button.textContent = "↓ Descargar imagen";
-    });
+
+    console.error("Error de descarga:", error);
+
+    window.open(state.resultUrl, "_blank");
+
+    showToast(
+      "Si no se descarga, guarda la imagen desde la nueva pestaña."
+    );
   }
 }
+
 $("downloadBtn").addEventListener("click", downloadResult);
 $("modalDownload").addEventListener("click", downloadResult);
 
-if (API_URL.includes("PEGA_AQUI")) {
-  $("configNote").textContent = "Vista lista. Para probar ropa con IA real, conecta tu Cloudflare Worker en app.js.";
-}
+// ==========================================
+// CONFIGURACIÓN
+// ==========================================
+
+$("configNote").textContent =
+  "Conexión preparada con tu Cloudflare Worker.";
