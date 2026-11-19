@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f7f5f1">
+  <title>Atelier — Probador virtual con IA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Atelier inicio">
+        <span class="brand-mark"><span></span><span></span><span></span></span>
+        <span>atelier<span class="brand-dot">.</span></span>
+      </a>
+      <nav class="main-nav">
+        <a class="active" href="#probador">Probador virtual</a>
+        <a href="#como-funciona">Cómo funciona</a>
+      </nav>
+      <div class="top-actions">
+        <span class="status-pill"><i></i> Estudio creativo</span>
+        <button class="avatar" aria-label="Perfil">A</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="intro" id="probador">
+        <div class="eyebrow"><span class="sparkle">✦</span> TU ESTILO, SIN LÍMITES</div>
+        <h1>Encuentra tu próximo<br><em>look favorito.</em></h1>
+        <p class="intro-copy">Prueba prendas virtualmente y descubre cómo se verían en ti antes de elegirlas.</p>
+        <div class="intro-meta">
+          <span><b>01</b> Sube tus fotos</span><span class="meta-line"></span>
+          <span><b>02</b> Genera tu look</span><span class="meta-line"></span>
+          <span><b>03</b> Guarda el resultado</span>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <div class="setup-panel">
+          <div class="panel-heading">
+            <div><span class="step-label">PASO 01 — PREPARA TU LOOK</span><h2>Tu probador</h2></div>
+            <span class="counter">2 fotos necesarias</span>
+          </div>
+
+          <div class="upload-card person-card">
+            <div class="upload-title">
+              <div class="upload-icon person-icon">01</div>
+              <div><h3>Tu fotografía</h3><p>La persona que llevará la prenda</p></div>
+              <span class="required">REQUERIDO</span>
+            </div>
+            <label class="dropzone" id="personDrop" for="personInput">
+              <input type="file" id="personInput" accept="image/png,image/jpeg,image/webp">
+              <div class="upload-placeholder" id="personPlaceholder">
+                <span class="cloud-icon">↑</span>
+                <strong>Arrastra tu foto aquí</strong>
+                <span>o <u>explora tus archivos</u></span>
+                <small>JPG, PNG o WEBP · Máx. 12 MB</small>
+              </div>
+              <img class="upload-preview" id="personPreview" alt="Vista previa de tu fotografía" hidden>
+              <span class="change-photo" id="personChange" hidden>Cambiar foto</span>
+            </label>
+            <div class="tip"><span>✧</span> Usa una foto de cuerpo completo, con buena luz y postura natural.</div>
+          </div>
+
+          <div class="upload-card garment-card">
+            <div class="upload-title">
+              <div class="upload-icon garment-icon">02</div>
+              <div><h3>La prenda</h3><p>La ropa que quieres probarte</p></div>
+              <span class="required">REQUERIDO</span>
+            </div>
+            <label class="dropzone garment-drop" id="garmentDrop" for="garmentInput">
+              <input type="file" id="garmentInput" accept="image/png,image/jpeg,image/webp">
+              <div class="upload-placeholder" id="garmentPlaceholder">
+                <span class="cloud-icon">↑</span>
+                <strong>Sube la foto de la prenda</strong>
+                <span>o <u>selecciona una imagen</u></span>
+                <small>De preferencia, fondo limpio · Máx. 12 MB</small>
+              </div>
+              <img class="upload-preview" id="garmentPreview" alt="Vista previa de la prenda" hidden>
+              <span class="change-photo" id="garmentChange" hidden>Cambiar foto</span>
+            </label>
+            <div class="tip"><span>✧</span> Procura que la prenda se vea completa y sin objetos que la cubran.</div>
+          </div>
+
+          <div class="options-row">
+            <div><span class="option-title">Calidad de resultado</span><span class="option-subtitle">Resolución de la imagen final</span></div>
+            <div class="quality-control">
+              <button class="quality-option active" data-quality="standard">Estándar</button>
+              <button class="quality-option" data-quality="high">Alta</button>
+            </div>
+          </div>
+
+          <button class="generate-btn" id="generateBtn" disabled>
+            <span class="btn-spark">✦</span><span id="generateText">Crear mi look</span><span class="btn-arrow">↗</span>
+          </button>
+          <p class="privacy-note"><span>♧</span> Tus imágenes se utilizan únicamente para generar tu prueba virtual.</p>
+          <p class="config-note" id="configNote">Conecta tu API de probador virtual para generar resultados con IA.</p>
+        </div>
+
+        <div class="result-panel">
+          <div class="result-header">
+            <div><span class="step-label">TU VISTA PREVIA</span><h2>El resultado</h2></div>
+            <span class="live-tag"><i></i> LIVE PREVIEW</span>
+          </div>
+          <div class="result-stage" id="resultStage">
+            <div class="stage-decoration decor-one"></div><div class="stage-decoration decor-two"></div>
+            <div class="empty-result" id="emptyResult">
+              <div class="hanger-art">
+                <svg viewBox="0 0 180 160" role="img" aria-label="Ilustración de una prenda en un perchero">
+                  <path d="M88 38c-2-12 13-17 20-8 5 7 0 13-7 18l-8 6" fill="none" stroke="#b7a99a" stroke-width="3" stroke-linecap="round"/>
+                  <path d="M93 54 22 105c-5 4-2 10 4 10h128c7 0 9-7 3-11L94 54" fill="none" stroke="#b7a99a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M52 90 68 78l26 18 25-18 12 12-10 42H62z" fill="#e8ded2" stroke="#d2c3b4" stroke-width="2"/>
+                  <path d="m68 78 26 18 25-18M82 88l12 8 12-8" fill="none" stroke="#c8b6a5" stroke-width="2"/>
+                  <circle cx="145" cy="38" r="4" fill="#c7a78d"/><circle cx="35" cy="52" r="3" fill="#d8c7b7"/>
+                </svg>
+              </div>
+              <h3>Tu próximo look empieza aquí</h3>
+              <p>Sube tu foto y la prenda que quieres probar. Aquí aparecerá tu fotografía con la prenda puesta.</p>
+              <div class="empty-tags"><span>✦ Vista ampliable</span><span>↓ Descargable</span></div>
+            </div>
+            <div class="result-image-wrap" id="resultImageWrap" hidden>
+              <img id="resultImage" alt="Resultado de tu probador virtual">
+              <button class="expand-btn" id="expandBtn" title="Ampliar imagen" aria-label="Ampliar imagen">⤢</button>
+              <div class="result-image-caption">TU LOOK GENERADO</div>
+            </div>
+            <div class="loading-state" id="loadingState" hidden>
+              <div class="loader-orbit"><span></span><span></span><span></span></div>
+              <h3>Estamos creando tu look</h3>
+              <p>La inteligencia artificial está combinando tus imágenes.</p>
+              <div class="progress-track"><span></span></div>
+              <small>Esto puede tardar unos segundos</small>
+            </div>
+          </div>
+          <div class="result-actions">
+            <div class="result-hint" id="resultHint"><span>✧</span> Tu resultado se mostrará aquí</div>
+            <div class="action-buttons">
+              <button class="secondary-btn" id="viewBtn" disabled>⤢ Ampliar</button>
+              <button class="download-btn" id="downloadBtn" disabled>↓ Descargar</button>
+            </div>
+          </div>
+          <div class="result-footnote"><span>✦</span> El resultado es una simulación visual. El ajuste real puede variar según la prenda y la fotografía.</div>
+        </div>
+      </section>
+
+      <section class="how-section" id="como-funciona">
+        <div><span class="step-label">SENCILLO, RÁPIDO Y PERSONAL</span><h2>Así de fácil es probar<br><em>algo nuevo.</em></h2></div>
+        <div class="how-steps">
+          <article><span>01</span><h3>Sube tu foto</h3><p>Elige una fotografía clara de la persona que usará la prenda.</p></article>
+          <article><span>02</span><h3>Elige una prenda</h3><p>Agrega una imagen de la ropa que quieres visualizar.</p></article>
+          <article><span>03</span><h3>Descubre tu look</h3><p>Genera, amplía y descarga tu nueva propuesta de estilo.</p></article>
+        </div>
+      </section>
+    </main>
+    <footer><a class="brand footer-brand" href="#"><span class="brand-mark"><span></span><span></span><span></span></span><span>atelier<span class="brand-dot">.</span></span></a><span>Una nueva forma de descubrir tu estilo.</span><span>© 2026 Atelier Studio</span></footer>
+  </div>
+
+  <div class="modal" id="imageModal" aria-hidden="true">
+    <div class="modal-backdrop" id="modalBackdrop"></div>
+    <div class="modal-content">
+      <button class="modal-close" id="modalClose" aria-label="Cerrar">×</button>
+      <div class="modal-topline"><span>VISTA AMPLIADA</span><span>ATELIER · VIRTUAL TRY-ON</span></div>
+      <img id="modalImage" alt="Imagen ampliada del resultado">
+      <div class="modal-bottom"><span>Desliza o usa el zoom del navegador para observar los detalles.</span><button id="modalDownload">↓ Descargar imagen</button></div>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status"></div>
+  <script src="app.js"></script>
+</body>
+</html>
